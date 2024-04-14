@@ -16,11 +16,15 @@
 """
 #Dependencies for the project
 import smtplib
+import re
+from email.utils import parseaddr
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
 from email import encoders
 
+#Variables
+regex = r"(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)"
 
 def send_email(senderEmail, senderPassword, receiverEmails, subject, messageBody, 
                attachmentPaths, emailProvider, emailProviderPort):
@@ -62,8 +66,21 @@ def send_email(senderEmail, senderPassword, receiverEmails, subject, messageBody
     #Close connection to the running server
     server.quit()
 
+#*def check(senderEmail):
+#    while not re.fullmatch(regex, senderEmail):
+#            senderEmail = input("Invalid Email. Please enter a valid email adress: ")
+
+def check(senderEmail):
+    while True:
+        if re.fullmatch(regex, senderEmail):
+            print(f"The email address \"{senderEmail}\" you entered is valid.")
+            return senderEmail
+        else:
+            senderEmail = input("Invalid Email. Please enter a valid email address: ")
+
+
 #User Input for all the Variables you need to enter for sending the email
-userName = input("Please enter your email address: ")
+senderEmail = check(input("Please enter your email address: "))
 emailPassword = input("Please enter your password: ")
 emailProvider = input("Please enter your email provider: ")
 emailBody = input("Please enter the message body: ")
@@ -76,8 +93,6 @@ while True:
     except ValueError:
          print("Invalid input. Please enter a valid Number for the port.")
 
-
-
 #Additional inputs for multiple recipients and attachments
 receiverEmails = input("Please enter the email addresses of the recipients (separated by commas:  ,  ): ")
 receiverEmails = [email.strip() for email in receiverEmails.split(",")]
@@ -86,5 +101,5 @@ attachmentPaths = input("Please enter the file paths of the attachments (separat
 attachmentPaths = [path.strip() for path in attachmentPaths.split(",")]
 
 #Sends the email out
-send_email(userName, emailPassword, receiverEmails, subject,
+send_email(senderEmail, emailPassword, receiverEmails, subject,
            emailBody, attachmentPaths, emailProvider, emailProviderPortNumberInt)
