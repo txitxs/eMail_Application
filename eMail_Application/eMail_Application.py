@@ -66,10 +66,6 @@ def send_email(senderEmail, senderPassword, receiverEmails, subject, messageBody
     #Close connection to the running server
     server.quit()
 
-#*def check(senderEmail):
-#    while not re.fullmatch(regex, senderEmail):
-#            senderEmail = input("Invalid Email. Please enter a valid email adress: ")
-
 def check(senderEmail):
     while True:
         if re.fullmatch(regex, senderEmail):
