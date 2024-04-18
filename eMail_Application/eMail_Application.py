@@ -27,14 +27,14 @@ from email import encoders
 regex = r"(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)"
 
 def send_email(senderEmail, senderPassword, receiverEmails, subject, messageBody, 
-               attachmentPaths, emailProvider, emailProviderPort):
+               attachmentPaths, emailProvider, emailProviderPortNumber):
     #Connect to SMTP server
     
     #Dynamically choose email provider
     smtpServer = f"smtp.{emailProvider}"
     
     #Dynamically choose port number
-    smtp_port = emailProviderPort
+    smtp_port = emailProviderPortNumber
     
     server = smtplib.SMTP(smtpServer, smtp_port)
     server.starttls()
@@ -68,6 +68,7 @@ def send_email(senderEmail, senderPassword, receiverEmails, subject, messageBody
 
 def check(senderEmail):
     while True:
+        senderEmail = senderEmail.strip()
         if re.fullmatch(regex, senderEmail):
             print(f"The email address \"{senderEmail}\" you entered is valid.")
             return senderEmail
@@ -77,8 +78,8 @@ def check(senderEmail):
 
 #User Input for all the Variables you need to enter for sending the email
 senderEmail = check(input("Please enter your email address: "))
-emailPassword = input("Please enter your password: ")
-emailProvider = input("Please enter your email provider: ")
+emailPassword = input("Please enter your password: ").strip
+emailProvider = input("Please enter your email provider: ").strip
 emailBody = input("Please enter the message body: ")
 
 while True:
@@ -89,8 +90,18 @@ while True:
     except ValueError:
          print("Invalid input. Please enter a valid Number for the port.")
 
+
+
+def checkReceiverEmails(receiverEmails):
+    while True:
+        if re.fullmatch(regex, receiverEmails):
+            print(f"The email address \"{receiverEmails}\" you entered is valid.")
+            return receiverEmails
+        else:
+            receiverEmails = input("Invalid Email. Please enter a valid email address: ")
+
 #Additional inputs for multiple recipients and attachments
-receiverEmails = input("Please enter the email addresses of the recipients (separated by commas:  ,  ): ")
+receiverEmails = checkReceiverEmails(input("Please enter the email addresses of the recipients (separated by commas:  ,  ): "))
 receiverEmails = [email.strip() for email in receiverEmails.split(",")]
 subject = input("Please enter the subject of the email: ")
 attachmentPaths = input("Please enter the file paths of the attachments (separated by commas): ")
