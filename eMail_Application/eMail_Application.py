@@ -15,6 +15,7 @@
 +================================================+
 """
 #Dependencies for the project
+from tkinter import *
 import smtplib
 import re
 from pwinput import pwinput
@@ -23,6 +24,13 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
 from email import encoders
+
+#erstellt das GUI Window
+window = Tk() 
+window.geometry("1024x768")
+window.title("Email Automation Application")
+window.iconphoto(file="")
+window.mainloop() 
 
 #Variables
 regex = r"(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)"
@@ -78,7 +86,7 @@ def check(senderEmail):
 
 
 #User Input for all the Variables you need to enter for sending the email
-senderEmail = check(input("Please enter your email address: "))
+senderEmail = check(input("Please enter your email address: ").strip)
 emailPassword = pwinput("Please enter your password: ").strip
 emailProvider = input("Please enter your email provider: ").strip
 emailBody = input("Please enter the message body: ")
