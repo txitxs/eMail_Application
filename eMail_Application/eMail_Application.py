@@ -17,6 +17,7 @@
 #Dependencies for the project
 import smtplib
 import re
+from pwinput import pwinput
 from email.utils import parseaddr
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -78,7 +79,7 @@ def check(senderEmail):
 
 #User Input for all the Variables you need to enter for sending the email
 senderEmail = check(input("Please enter your email address: "))
-emailPassword = input("Please enter your password: ").strip
+emailPassword = pwinput("Please enter your password: ").strip
 emailProvider = input("Please enter your email provider: ").strip
 emailBody = input("Please enter the message body: ")
 
