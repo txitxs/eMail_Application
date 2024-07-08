@@ -24,17 +24,16 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
 from email import encoders
+import os 
 
 #erstellt das GUI Window
 window = Tk() 
 window.geometry("1024x768")
 window.title("Email Automation Application")
-window.iconphoto(file="")
-window.mainloop() 
+icon = PhotoImage(file="mail-inbox-app.png")
+window.iconphoto(True, icon)
 
-#Variables
-regex = r"(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)"
-
+# Funktion zum Senden der E-Mail
 def send_email(senderEmail, senderPassword, receiverEmails, subject, messageBody, 
                attachmentPaths, emailProvider, emailProviderPortNumber):
     #Connect to SMTP server
@@ -57,17 +56,21 @@ def send_email(senderEmail, senderPassword, receiverEmails, subject, messageBody
         msg["To"] = receiverEmail
         msg["subject"] = subject
         
-        #Adds message body
+        #Adds message bodys
         msg.attach(MIMEText(messageBody, "plain"))
         
         #Add all attachments to the Email you want to sends
         for attachmentPath in attachmentPaths:
-            with open(attachmentPath, "rb") as attachment:
-                part = MIMEBase('application', 'octet-stream')
-                part.set_payload(attachment.read())
-                encoders.encode_base64(part)
-            part.add_header('Content-Disposition', f'attachment; filename= {attachmentPath}')
-            msg.attach(part)
+            if os.path.isfile(attachmentPath):
+                with open(attachmentPath, "rb") as attachment:
+                    part = MIMEBase('application', 'octet-stream')
+                    part.set_payload(attachment.read())
+                    encoders.encode_base64(part)
+                part.add_header('Content-Disposition', f'attachment; filename= {os.path.basename(attachmentPath)}')
+                msg.attach(part)
+        else:
+                result_label.config(text=f"Attachment file not found: {attachmentPath}")
+                return
             
         #Send email
         server.sendmail(senderEmail, receiverEmail,msg.as_string())
@@ -75,18 +78,32 @@ def send_email(senderEmail, senderPassword, receiverEmails, subject, messageBody
     #Close connection to the running server
     server.quit()
 
-def check(senderEmail):
-    while True:
-        senderEmail = senderEmail.strip()
-        if re.fullmatch(regex, senderEmail):
-            print(f"The email address \"{senderEmail}\" you entered is valid.")
-            return senderEmail
-        else:
-            senderEmail = input("Invalid Email. Please enter a valid email address: ")
+def check(email):
+    regex = r"(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)"
+    if re.fullmatch(regex, email):
+        return True
+    
+    else:
+        return False
 
+def submit_email_info():
+    senderEmail = senderEmailEntry.get()
+    if not check(senderEmail):  
+        result_label.config(text="Invalid sender email address.")  
+        return  
+
+
+#def check(senderEmail):
+#    while True:
+ #       senderEmail = senderEmail.strip()
+ #       if re.fullmatch(regex, senderEmail):
+ #           print(f"The email address \"{senderEmail}\" you entered is valid.")
+ #           return senderEmail
+  #      else:
+ #           senderEmail = input("Invalid Email. Please enter a valid email address: ")
 
 #User Input for all the Variables you need to enter for sending the email
-senderEmail = check(input("Please enter your email address: ").strip)
+#senderEmail = check(input("Please enter your email address: "))
 emailPassword = pwinput("Please enter your password: ").strip
 emailProvider = input("Please enter your email provider: ").strip
 emailBody = input("Please enter the message body: ")
