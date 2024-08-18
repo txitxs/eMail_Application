@@ -33,11 +33,14 @@ window.title("Email Automation Application")
 icon = PhotoImage(file="mail-inbox-app.png")
 window.iconphoto(True, icon)
 
+#regex for email validation
+regex = r"(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)"  
+
 # Funktion zum Senden der E-Mail
 def send_email(senderEmail, senderPassword, receiverEmails, subject, messageBody, 
                attachmentPaths, emailProvider, emailProviderPortNumber):
     #Connect to SMTP server
-    
+ 
     #Dynamically choose email provider
     smtpServer = f"smtp.{emailProvider}"
     
@@ -52,9 +55,9 @@ def send_email(senderEmail, senderPassword, receiverEmails, subject, messageBody
         #Creates the message u want to send out
         
         msg = MIMEMultipart()
-        msg["From"] = send_email
+        msg["From"] = senderEmail
         msg["To"] = receiverEmail
-        msg["subject"] = subject
+        msg["Subject"] = subject
         
         #Adds message bodys
         msg.attach(MIMEText(messageBody, "plain"))
@@ -79,28 +82,20 @@ def send_email(senderEmail, senderPassword, receiverEmails, subject, messageBody
     server.quit()
 
 def check(email):
-    regex = r"(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)"
+    email = email.strip()  
     if re.fullmatch(regex, email):
-        return True
-    
+        print(f"The email address \"{email}\" you entered is valid.")
+        return True  
     else:
-        return False
+        print(f"The email address \"{email}\" is invalid.")
+        return False 
 
 def submit_email_info():
     senderEmail = senderEmailEntry.get()
     if not check(senderEmail):  
         result_label.config(text="Invalid sender email address.")  
-        return  
+        return 
 
-
-#def check(senderEmail):
-#    while True:
- #       senderEmail = senderEmail.strip()
- #       if re.fullmatch(regex, senderEmail):
- #           print(f"The email address \"{senderEmail}\" you entered is valid.")
- #           return senderEmail
-  #      else:
- #           senderEmail = input("Invalid Email. Please enter a valid email address: ")
 
 #User Input for all the Variables you need to enter for sending the email
 #senderEmail = check(input("Please enter your email address: "))
@@ -136,3 +131,54 @@ attachmentPaths = [path.strip() for path in attachmentPaths.split(",")]
 #Sends the email out
 send_email(senderEmail, emailPassword, receiverEmails, subject,
            emailBody, attachmentPaths, emailProvider, emailProviderPortNumberInt)
+
+senderEmailLaber = Label(window, text = "Sender Email:")
+senderEmailLaber.pack()
+senderEmailEntry = Entry(window, width=50)
+senderEmailEntry.pack()
+
+passwordLabel = Label(window, text= "Password:")
+passwordLabel.pack()
+passwordEntry = Entry(window, width=50, show='*')
+passwordEntry.pack()
+
+receiverEmailsLabel = Label(window, text="Receiver Emails (separated by commas):")
+receiverEmailsLabel.pack()
+receiverEmailsEntry = Entry(window, width=50)
+receiverEmailsEntry.pack()
+
+subjectLabel = Label(window, text="Subject:")
+subjectLabel.pack()
+subjectEntry = Entry(window, width=50)
+subjectEntry.pack()
+
+bodyLabel = Label(window, text="Email Body:")
+bodyLabel.pack()
+bodyEntry = Text(window, height=10, width=50)
+bodyEntry.pack()
+
+attachmentPathsLabel = Label(window, text="Attachment Paths (separated by commas):")
+attachmentPathsLabel.pack()
+attachmentPathsEntry = Entry(window, width=50)
+attachmentPathsEntry.pack()
+
+emailProviderLabel = Label(window, text="Email Provider (e.g., gmail.com):")
+emailProviderLabel.pack()
+emailProviderEntry = Entry(window, width=50)
+emailProviderEntry.pack()
+
+portLabel = Label(window, text="Port Number:")
+portLabel.pack()
+portEntry = Entry(window, width=50)
+portEntry.pack()
+
+# Label für die Ergebnisanzeige
+result_label = Label(window, text="")
+result_label.pack()
+
+# Button zum Absenden der Email
+sendButton = Button(window, text="Send Email", command=submit_email_info)
+sendButton.pack()
+
+# Main loop starten
+window.mainloop()
