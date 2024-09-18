@@ -41,99 +41,80 @@ def send_email(senderEmail, senderPassword, receiverEmails, subject, messageBody
                attachmentPaths, emailProvider, emailProviderPortNumber):
     #Connect to SMTP server
  
-    #Dynamically choose email provider
-    smtpServer = f"smtp.{emailProvider}"
-    
-    #Dynamically choose port number
-    smtp_port = emailProviderPortNumber
-    
-    server = smtplib.SMTP(smtpServer, smtp_port)
-    server.starttls()
-    server.login(senderEmail, senderPassword)
-    
-    for receiverEmail in receiverEmails:
-        #Creates the message u want to send out
+    try:
         
-        msg = MIMEMultipart()
-        msg["From"] = senderEmail
-        msg["To"] = receiverEmail
-        msg["Subject"] = subject
+        #Dynamically choose email provider
+        smtpServer = f"smtp.{emailProvider}"
         
-        #Adds message bodys
-        msg.attach(MIMEText(messageBody, "plain"))
+        #Dynamically choose port number
+        smtp_port = emailProviderPortNumber
         
-        #Add all attachments to the Email you want to sends
-        for attachmentPath in attachmentPaths:
-            if os.path.isfile(attachmentPath):
-                with open(attachmentPath, "rb") as attachment:
-                    part = MIMEBase('application', 'octet-stream')
-                    part.set_payload(attachment.read())
-                    encoders.encode_base64(part)
-                part.add_header('Content-Disposition', f'attachment; filename= {os.path.basename(attachmentPath)}')
-                msg.attach(part)
-        else:
-                result_label.config(text=f"Attachment file not found: {attachmentPath}")
-                return
+        server = smtplib.SMTP(smtpServer, smtp_port)
+        server.starttls()
+        server.login(senderEmail, senderPassword)
+        
+        for receiverEmail in receiverEmails:
+            #Creates the message u want to send out
             
-        #Send email
-        server.sendmail(senderEmail, receiverEmail,msg.as_string())
+            msg = MIMEMultipart()
+            msg["From"] = senderEmail
+            msg["To"] = receiverEmail
+            msg["Subject"] = subject
+            
+            #Adds message bodys
+            msg.attach(MIMEText(messageBody, "plain"))
+            
+            #Add all attachments to the Email you want to sends
+            for attachmentPath in attachmentPaths:
+                if os.path.isfile(attachmentPath):
+                    with open(attachmentPath, "rb") as attachment:
+                        part = MIMEBase('application', 'octet-stream')
+                        part.set_payload(attachment.read())
+                        encoders.encode_base64(part)
+                    part.add_header('Content-Disposition', f'attachment; filename= {os.path.basename(attachmentPath)}')
+                    msg.attach(part)
+                else:
+                    result_label.config(text=f"Attachment file not found: {attachmentPath}")
+                    return
+            
+            #Send email
+            server.sendmail(senderEmail, receiverEmail,msg.as_string())
+            
+        #Close connection to the running server
+        server.quit()
+    
+        #Email was sent succesfule
+        result_label.config(text="Email seccessfully sent!")
         
-    #Close connection to the running server
-    server.quit()
+    except Exception as error: 
+            result_label.config(text=f"Error: {error}")
 
 def check(email):
     email = email.strip()  
-    if re.fullmatch(regex, email):
-        print(f"The email address \"{email}\" you entered is valid.")
-        return True  
-    else:
-        print(f"The email address \"{email}\" is invalid.")
-        return False 
+    return re.fullmatch(regex, email)
 
 def submit_email_info():
     senderEmail = senderEmailEntry.get()
-    if not check(senderEmail):  
-        result_label.config(text="Invalid sender email address.")  
-        return 
+    emailPassword = passwordEntry.get()
+    receiverEmails = receiverEmailsEntry.get().split(",")
+    subject = subjectEntry.get()
+    emailBody = bodyEntry.get("1.0", END)
+    attachmentPaths = attachmentPathsEntry.get().split(",")
+    emailProvider = emailProviderEntry.get().strip()
 
-
-#User Input for all the Variables you need to enter for sending the email
-#senderEmail = check(input("Please enter your email address: "))
-emailPassword = pwinput("Please enter your password: ").strip
-emailProvider = input("Please enter your email provider: ").strip
-emailBody = input("Please enter the message body: ")
-
-while True:
+    #validate port number
     try:
-        emailProviderPortNumber = input("Please enter the port number for the email provider: ")
-        emailProviderPortNumberInt = int(emailProviderPortNumber)
-        break
+        emailProviderPortNumberInt = int(portEntry.get())
     except ValueError:
-         print("Invalid input. Please enter a valid Number for the port.")
-
-
-
-def checkReceiverEmails(receiverEmails):
-    while True:
-        if re.fullmatch(regex, receiverEmails):
-            print(f"The email address \"{receiverEmails}\" you entered is valid.")
-            return receiverEmails
-        else:
-            receiverEmails = input("Invalid Email. Please enter a valid email address: ")
-
-#Additional inputs for multiple recipients and attachments
-receiverEmails = checkReceiverEmails(input("Please enter the email addresses of the recipients (separated by commas:  ,  ): "))
-receiverEmails = [email.strip() for email in receiverEmails.split(",")]
-subject = input("Please enter the subject of the email: ")
-attachmentPaths = input("Please enter the file paths of the attachments (separated by commas): ")
-attachmentPaths = [path.strip() for path in attachmentPaths.split(",")]
+        result_label.config(text="Invalid port number. Please enter a valid number.")
+        return
 
 #Sends the email out
-send_email(senderEmail, emailPassword, receiverEmails, subject,
-           emailBody, attachmentPaths, emailProvider, emailProviderPortNumberInt)
+    send_email(senderEmail, emailPassword, receiverEmails, subject,
+                emailBody, attachmentPaths, emailProvider, emailProviderPortNumberInt)
 
-senderEmailLaber = Label(window, text = "Sender Email:")
-senderEmailLaber.pack()
+senderEmailLabel = Label(window, text = "Sender Email:")
+senderEmailLabel.pack()
 senderEmailEntry = Entry(window, width=50)
 senderEmailEntry.pack()
 
