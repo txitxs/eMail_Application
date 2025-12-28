@@ -14,152 +14,236 @@
 |                                                |
 +================================================+
 """
-#Dependencies for the project
-from tkinter import *
-import smtplib
+import os
 import re
-from pwinput import pwinput
-from email.utils import parseaddr
+import smtplib
+from email import encoders
+from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from email.mime.base import MIMEBase
-from email import encoders
-import os 
+from tkinter import PhotoImage, Text, Tk, filedialog, messagebox
+from tkinter import ttk
 
-#erstellt das GUI Window
-window = Tk() 
-window.geometry("1024x768")
-window.title("Email Automation Application")
-icon = PhotoImage(file="mail-inbox-app.png")
-window.iconphoto(True, icon)
 
-#regex for email validation
-regex = r"(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)"  
+EMAIL_REGEX = r"(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)"
 
-# Funktion zum Senden der E-Mail
-def send_email(senderEmail, senderPassword, receiverEmails, subject, messageBody, 
-               attachmentPaths, emailProvider, emailProviderPortNumber):
-    #Connect to SMTP server
- 
+
+def is_valid_email(address: str) -> bool:
+    cleaned = address.strip()
+    return bool(re.fullmatch(EMAIL_REGEX, cleaned))
+
+
+def validate_recipients(raw: str):
+    addresses = [addr.strip() for addr in raw.split(",") if addr.strip()]
+    invalid = [addr for addr in addresses if not is_valid_email(addr)]
+    return addresses, invalid
+
+
+def send_email(sender_email, sender_password, receiver_emails, subject, message_body,
+               attachment_paths, email_provider, email_provider_port_number):
+    smtp_server = f"smtp.{email_provider}"
+    smtp_port = email_provider_port_number
+    server = smtplib.SMTP(smtp_server, smtp_port)
+    server.starttls()
+    server.login(sender_email, sender_password)
+
+    for receiver_email in receiver_emails:
+        msg = MIMEMultipart()
+        msg["From"] = sender_email
+        msg["To"] = receiver_email
+        msg["Subject"] = subject
+        msg.attach(MIMEText(message_body, "plain"))
+
+        for attachment_path in attachment_paths:
+            with open(attachment_path, "rb") as attachment:
+                part = MIMEBase("application", "octet-stream")
+                part.set_payload(attachment.read())
+                encoders.encode_base64(part)
+            part.add_header(
+                "Content-Disposition",
+                f"attachment; filename={os.path.basename(attachment_path)}",
+            )
+            msg.attach(part)
+
+        server.sendmail(sender_email, receiver_email, msg.as_string())
+
+    server.quit()
+
+
+def build_ui():
+    window = Tk()
+    window.title("Email Automation Application")
+    window.configure(bg="#0f172a")
     try:
-        
-        #Dynamically choose email provider
-        smtpServer = f"smtp.{emailProvider}"
-        
-        #Dynamically choose port number
-        smtp_port = emailProviderPortNumber
-        
-        server = smtplib.SMTP(smtpServer, smtp_port)
-        server.starttls()
-        server.login(senderEmail, senderPassword)
-        
-        for receiverEmail in receiverEmails:
-            #Creates the message u want to send out
-            
-            msg = MIMEMultipart()
-            msg["From"] = senderEmail
-            msg["To"] = receiverEmail
-            msg["Subject"] = subject
-            
-            #Adds message bodys
-            msg.attach(MIMEText(messageBody, "plain"))
-            
-            #Add all attachments to the Email you want to sends
-            for attachmentPath in attachmentPaths:
-                if os.path.isfile(attachmentPath):
-                    with open(attachmentPath, "rb") as attachment:
-                        part = MIMEBase('application', 'octet-stream')
-                        part.set_payload(attachment.read())
-                        encoders.encode_base64(part)
-                    part.add_header('Content-Disposition', f'attachment; filename= {os.path.basename(attachmentPath)}')
-                    msg.attach(part)
-                else:
-                    result_label.config(text=f"Attachment file not found: {attachmentPath}")
-                    return
-            
-            #Send email
-            server.sendmail(senderEmail, receiverEmail,msg.as_string())
-            
-        #Close connection to the running server
-        server.quit()
-    
-        #Email was sent succesfule
-        result_label.config(text="Email seccessfully sent!")
-        
-    except Exception as error: 
-            result_label.config(text=f"Error: {error}")
+        icon = PhotoImage(file="mail-inbox-app.png")
+        window.iconphoto(True, icon)
+    except Exception:
+        pass
 
-def check(email):
-    email = email.strip()  
-    return re.fullmatch(regex, email)
+    # Consistent styling for a clean, readable UI
+    style = ttk.Style()
+    style.theme_use("clam")
+    style.configure("TLabel", foreground="#e2e8f0", background="#0f172a", font=("Segoe UI", 11))
+    style.configure("TEntry", fieldbackground="#1e293b", foreground="#e2e8f0")
+    style.configure(
+        "Input.TEntry",
+        padding=(8, 6),
+        relief="flat",
+        fieldbackground="#111827",
+        foreground="#e2e8f0",
+        insertcolor="#e2e8f0",
+    )
+    style.map(
+        "Input.TEntry",
+        fieldbackground=[("focus", "#0b1221"), ("!focus", "#111827")],
+    )
+    style.configure("TButton", font=("Segoe UI", 11, "bold"), padding=10)
+    style.map("TButton", background=[("active", "#0ea5e9"), ("!active", "#0284c7")], foreground=[("active", "#0f172a"), ("!active", "#e2e8f0")])
+    style.configure("Card.TFrame", background="#111827", bordercolor="#1f2937", relief="ridge", borderwidth=1)
 
-def submit_email_info():
-    senderEmail = senderEmailEntry.get()
-    emailPassword = passwordEntry.get()
-    receiverEmails = receiverEmailsEntry.get().split(",")
-    subject = subjectEntry.get()
-    emailBody = bodyEntry.get("1.0", END)
-    attachmentPaths = attachmentPathsEntry.get().split(",")
-    emailProvider = emailProviderEntry.get().strip()
+    header = ttk.Frame(window, style="Card.TFrame", padding=20)
+    header.pack(fill="x", padx=20, pady=(20, 10))
+    ttk.Label(header, text="Email Automation", font=("Segoe UI Semibold", 20)).pack(anchor="w")
+    ttk.Label(header, text="Sende schnell formatierte Mails mit Anhängen.", font=("Segoe UI", 12), foreground="#94a3b8").pack(anchor="w", pady=(4, 0))
 
-    #validate port number
-    try:
-        emailProviderPortNumberInt = int(portEntry.get())
-    except ValueError:
-        result_label.config(text="Invalid port number. Please enter a valid number.")
-        return
+    form = ttk.Frame(window, style="Card.TFrame", padding=20)
+    form.pack(fill="both", expand=True, padx=20, pady=10)
 
-#Sends the email out
-    send_email(senderEmail, emailPassword, receiverEmails, subject,
-                emailBody, attachmentPaths, emailProvider, emailProviderPortNumberInt)
+    sender_email_var = ttk.Entry(form, width=40)
+    sender_email_var.insert(0, "you@example.com")
+    sender_password_var = ttk.Entry(form, width=40, show="*")
+    receiver_emails_var = ttk.Entry(form, width=60)
+    subject_var = ttk.Entry(form, width=60)
+    body_text = Text(form, height=12, width=90, bg="#0b1221", fg="#e2e8f0", insertbackground="#e2e8f0", highlightbackground="#1f2937", relief="flat", wrap="word")
+    attachment_list = []
 
-senderEmailLabel = Label(window, text = "Sender Email:")
-senderEmailLabel.pack()
-senderEmailEntry = Entry(window, width=50)
-senderEmailEntry.pack()
+    ttk.Label(form, text="Absender").grid(row=0, column=0, sticky="w", pady=(0, 6))
+    sender_email_var.grid(row=1, column=0, sticky="w", pady=(0, 14))
+    ttk.Label(form, text="Passwort").grid(row=0, column=1, sticky="w", padx=(20, 0), pady=(0, 6))
+    sender_password_var.grid(row=1, column=1, sticky="w", padx=(20, 0), pady=(0, 14))
 
-passwordLabel = Label(window, text= "Password:")
-passwordLabel.pack()
-passwordEntry = Entry(window, width=50, show='*')
-passwordEntry.pack()
+    ttk.Label(form, text="Empfänger (Komma-getrennt)").grid(row=2, column=0, sticky="w", pady=(0, 6))
+    receiver_emails_var.grid(row=3, column=0, columnspan=2, sticky="we", pady=(0, 14))
 
-receiverEmailsLabel = Label(window, text="Receiver Emails (separated by commas):")
-receiverEmailsLabel.pack()
-receiverEmailsEntry = Entry(window, width=50)
-receiverEmailsEntry.pack()
+    ttk.Label(form, text="Betreff").grid(row=4, column=0, sticky="w", pady=(0, 6))
+    subject_var.grid(row=5, column=0, columnspan=2, sticky="we", pady=(0, 14))
 
-subjectLabel = Label(window, text="Subject:")
-subjectLabel.pack()
-subjectEntry = Entry(window, width=50)
-subjectEntry.pack()
+    ttk.Label(form, text="Text").grid(row=6, column=0, sticky="w", pady=(0, 6))
+    body_text.grid(row=7, column=0, columnspan=2, sticky="we", pady=(0, 14))
 
-bodyLabel = Label(window, text="Email Body:")
-bodyLabel.pack()
-bodyEntry = Text(window, height=10, width=50)
-bodyEntry.pack()
+    ttk.Label(form, text="Anhänge").grid(row=8, column=0, sticky="w", pady=(0, 6))
+    attachments_box = Text(form, height=5, width=90, bg="#0b1221", fg="#e2e8f0", state="disabled", relief="flat")
+    attachments_box.grid(row=9, column=0, columnspan=2, sticky="we", pady=(0, 10))
 
-attachmentPathsLabel = Label(window, text="Attachment Paths (separated by commas):")
-attachmentPathsLabel.pack()
-attachmentPathsEntry = Entry(window, width=50)
-attachmentPathsEntry.pack()
+    def refresh_attachments_box():
+        attachments_box.configure(state="normal")
+        attachments_box.delete("1.0", "end")
+        if attachment_list:
+            attachments_box.insert("1.0", "\n".join(attachment_list))
+        attachments_box.configure(state="disabled")
 
-emailProviderLabel = Label(window, text="Email Provider (e.g., gmail.com):")
-emailProviderLabel.pack()
-emailProviderEntry = Entry(window, width=50)
-emailProviderEntry.pack()
+    def add_attachments():
+        files = filedialog.askopenfilenames(title="Anhänge auswählen")
+        for file_path in files:
+            if file_path and file_path not in attachment_list:
+                attachment_list.append(file_path)
+        refresh_attachments_box()
 
-portLabel = Label(window, text="Port Number:")
-portLabel.pack()
-portEntry = Entry(window, width=50)
-portEntry.pack()
+    def clear_attachments():
+        attachment_list.clear()
+        refresh_attachments_box()
 
-# Label für die Ergebnisanzeige
-result_label = Label(window, text="")
-result_label.pack()
+    buttons_row = ttk.Frame(form, style="Card.TFrame")
+    buttons_row.grid(row=10, column=0, columnspan=2, sticky="w", pady=(0, 14))
+    ttk.Button(buttons_row, text="Anhänge hinzufügen", command=add_attachments).pack(side="left", padx=(0, 10))
+    ttk.Button(buttons_row, text="Anhänge leeren", command=clear_attachments).pack(side="left")
 
-# Button zum Absenden der Email
-sendButton = Button(window, text="Send Email", command=submit_email_info)
-sendButton.pack()
+    provider_row = ttk.Frame(form, style="Card.TFrame", padding=(0, 6, 0, 0))
+    provider_row.grid(row=11, column=0, columnspan=2, sticky="w")
+    ttk.Label(provider_row, text="Provider (z.B. gmail.com)").pack(side="left", padx=(0, 10))
+    provider_var = ttk.Entry(provider_row, width=26, style="Input.TEntry")
+    provider_var.insert(0, "gmail.com")
+    provider_var.pack(side="left", padx=(0, 20))
+    ttk.Label(provider_row, text="Port").pack(side="left", padx=(0, 8))
+    port_var = ttk.Entry(provider_row, width=8, style="Input.TEntry")
+    port_var.insert(0, "587")
+    port_var.pack(side="left")
 
-# Main loop starten
-window.mainloop()
+    status_var = ttk.Label(window, text="Bereit", anchor="w")
+    status_var.pack(fill="x", padx=20, pady=(0, 10))
+
+    def update_status(message, is_error=False):
+        status_var.configure(text=message, foreground="#f87171" if is_error else "#34d399")
+        window.update_idletasks()
+
+    def submit_email_info():
+        sender_email = sender_email_var.get().strip()
+        email_password = sender_password_var.get()
+        receivers, invalid_receivers = validate_recipients(receiver_emails_var.get())
+        subject = subject_var.get().strip()
+        email_body = body_text.get("1.0", "end").strip()
+        email_provider = provider_var.get().strip()
+
+        try:
+            port_int = int(port_var.get().strip())
+        except ValueError:
+            update_status("Port muss eine Zahl sein.", True)
+            return
+
+        if not is_valid_email(sender_email):
+            update_status("Absender-Adresse ist ungültig.", True)
+            return
+
+        if invalid_receivers:
+            update_status(f"Ungültige Empfänger: {', '.join(invalid_receivers)}", True)
+            return
+
+        if not receivers:
+            update_status("Mindestens ein Empfänger wird benötigt.", True)
+            return
+
+        if not subject:
+            update_status("Betreff darf nicht leer sein.", True)
+            return
+
+        missing = [p for p in attachment_list if not os.path.isfile(p)]
+        if missing:
+            update_status(f"Datei nicht gefunden: {missing[0]}", True)
+            return
+
+        update_status("Sende...", False)
+        try:
+            send_email(sender_email, email_password, receivers, subject, email_body,
+                       attachment_list, email_provider, port_int)
+            update_status("E-Mail erfolgreich gesendet.", False)
+            messagebox.showinfo("Erfolg", "E-Mail wurde versendet.")
+        except Exception as error:  # smtp errors
+            update_status(f"Fehler: {error}", True)
+
+    action_bar = ttk.Frame(window, style="Card.TFrame", padding=16)
+    action_bar.pack(fill="x", padx=20, pady=10)
+    ttk.Button(action_bar, text="E-Mail senden", command=submit_email_info).pack(side="right")
+
+    form.columnconfigure(0, weight=1)
+    form.columnconfigure(1, weight=1)
+
+    # Derive initial size from required space, enforce a minimum, allow resize.
+    window.update_idletasks()
+    padding = 60
+    req_width = window.winfo_reqwidth() + padding
+    req_height = window.winfo_reqheight() + padding
+    screen_w = window.winfo_screenwidth()
+    screen_h = window.winfo_screenheight()
+    width = min(req_width, screen_w)
+    height = min(req_height, screen_h)
+    x = (screen_w - width) // 2
+    y = (screen_h - height) // 2
+    window.geometry(f"{width}x{height}+{x}+{y}")
+    window.minsize(width, height)
+    window.resizable(True, True)
+
+    window.mainloop()
+
+
+if __name__ == "__main__":
+    build_ui()
